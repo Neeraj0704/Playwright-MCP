@@ -23,6 +23,7 @@ It includes:
 ├─ .gitignore
 └─ debug/                  # Debug artifacts (screenshots, HTML dumps)
 ---
+```
 
 ## Prerequisites
 
