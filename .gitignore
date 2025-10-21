@@ -1,0 +1,43 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+.build/
+dist/
+build/
+.coverage
+htmlcov/
+.pytest_cache/
+
+# --- Environments / tools ---
+.venv*/
+venv*/
+.env
+.env.local
+*.log
+
+# --- Playwright artifacts ---
+playwright-report/
+test-results/
+blob-report/
+ms-playwright/
+.trace/
+trace.zip
+
+# --- Debug dumps ---
+debug/
+*.png
+*.html
+
+# --- IDE ---
+.vscode/
+.idea/
+*.iml
+
+# --- OS ---
+.DS_Store
+Thumbs.db

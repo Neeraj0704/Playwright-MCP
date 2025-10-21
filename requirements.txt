@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pydantic
+google-generativeai
+playwright
+python-dotenv
+tenacity
+jsonschema
+
