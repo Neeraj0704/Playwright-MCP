@@ -110,25 +110,35 @@ This path provides a minimal Flask application that exposes a `/search` REST end
 ⸻
 
 
-Configuration Notes
-	•	Keywordization: agent_cli.py converts natural sentences into a compact query (e.g., “crimes LA”), and uses that both for the LLM plan and for the /browse fallback.
-	•	MCP Server: mcp_server.py exposes tools:
-	•	playwright_navigate
-	•	playwright_snapshot (rich snapshot: roles, attributes, selector candidates)
-	•	playwright_click
-	•	playwright_fill (clears and types with small delays to trigger SPA listeners)
-	•	Robustness: Timeouts and fallbacks (e.g., waiting for DOMContentLoaded; browsing directly to /browse?q=... if search results aren’t visible; debug dumps on failure).
-	•	Debug Artifacts: On errors/timeouts, screenshots and HTML dumps are saved in debug/.
+## ⚙️ Configuration Notes
 
-⸻
+- **Keywordization:**  
+  `agent_cli.py` converts natural sentences into compact queries (e.g., “crimes LA”) and uses them both for the LLM plan and for the `/browse` fallback.
 
-Troubleshooting
-	•	Snapshot error from MCP:
-The server falls back to an accessibility snapshot and returns a warning payload—your agent still runs. Make sure the MCP_PLAYWRIGHT_CMD/ARGS are set, and try MCP_HEADLESS=0 locally to see the MCP browser.
-	•	Fill not working:
-The MCP fill tool clicks, selects all, backspaces, and types with a delay to trigger SPA listeners.
-	•	Selectors changed on the site:
-The LLM is prompted to use the exact stable selectors you’ve configured. If the site changes drastically, adjust those in ai_agent.py prompt text.
+- **MCP Server (`mcp_server.py`):**  
+  Exposes tools for browser control and page interaction:
+  - `playwright_navigate`
+  - `playwright_snapshot` (rich snapshot: roles, attributes, selector candidates)
+  - `playwright_click`
+  - `playwright_fill` (clears and types with small delays to trigger SPA listeners)
 
-⸻
+- **Robustness:**  
+  Includes timeouts and fallback mechanisms:
+  - Waits for `DOMContentLoaded`
+  - Navigates directly to `/browse?q=...` if search results aren’t visible
+  - Saves debug dumps on failure
+
+- **Debug Artifacts:**  
+  On errors or timeouts, screenshots and HTML dumps are saved automatically in the `debug/` directory.
+
+---
+
+## 🧰 Troubleshooting
+
+### 🟡 Snapshot Error from MCP
+If you encounter a snapshot error, the system falls back to an accessibility snapshot and continues running.  
+Make sure the environment variables `MCP_PLAYWRIGHT_CMD` and `MCP_PLAYWRIGHT_ARGS` are set correctly.  
+You can run with:
+```bash
+MCP_HEADLESS=0
 
