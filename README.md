@@ -22,7 +22,6 @@ It includes:
 ├─ requirements.txt
 ├─ .gitignore
 └─ debug/                  # Debug artifacts (screenshots, HTML dumps)
-
 ---
 
 ## Prerequisites
