@@ -1,12 +1,11 @@
-# LA Data Bot — Playwright + MCP AI Agent
+# LA Data Bot — Playwright + MCP AI Agent + Flask API Frontend
 
 This project automates searching the Los Angeles Open Data Portal (https://data.lacity.org) and extracting dataset results.
 
 It includes:
 - **Required Core:** A deterministic Playwright “robot” that opens the site, searches, and prints a clear result.
 - **Optional Challenge 1 (Bonus):** An AI-driven planner (Gemini) that builds a step plan based on live page context provided via **MCP** (Model Context Protocol) using a Playwright MCP server.
-
-> Optional Challenge 2 (API) is not implemented yet.
+- **Optional Challenge 2 (API + Frontend):** A minimal Flask API and frontend that exposes a `/search` REST endpoint and a simple HTML interface for user input and dataset display.
 
 ---
 
@@ -17,6 +16,7 @@ It includes:
 ├─ ai_agent.py             # Planning + execution helpers (LLM + MCP integration)
 ├─ mcp_client.py           # Minimal MCP client wrapper
 ├─ mcp_server.py           # Playwright MCP server (rich page snapshot + tools)
+├─ app.py                  # Flask API + UI (Optional Challenge 2, integrates with agent_cli.py run_goal)
 ├─ requirements.txt
 ├─ .gitignore
 └─ debug/                  # screenshots + HTML dumps (gitignored)
@@ -91,6 +91,19 @@ python agent_cli.py --goal "I want to know about the crimes in LA" --debug
 	•	a[href*='/d/']
 	•	It executes the plan step-by-step and prints the first hit.
 	•	It also navigates to /browse?... if needed and prints up to 10 dataset results.
+
+C) Optional Challenge 2 (Flask Web API + Frontend)
+
+This path provides a minimal Flask application that exposes a `/search` REST endpoint and a simple HTML interface for user interaction.
+
+- Launch the app with:
+  ```
+  python app.py
+  ```
+- The `/search` endpoint accepts a query parameter and returns dataset results in JSON.
+- The included HTML frontend allows users to input their search query, submit it, and view dataset results dynamically.
+- A loading indicator is shown while the search is in progress.
+- The Flask app integrates with the same `run_goal` logic from `agent_cli.py` to perform the search and extraction.
 
 ⸻
 
