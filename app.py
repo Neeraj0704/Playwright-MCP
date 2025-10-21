@@ -22,9 +22,10 @@ def index():
       body{font-family:system-ui,Segoe UI,Arial;margin:2rem;max-width:900px}
       form{display:flex;gap:.5rem}
       input[type=text]{flex:1;padding:.6rem;border:1px solid #ccc;border-radius:.5rem}
-      button{padding:.6rem 1rem;border:0;border-radius:.5rem;background:#111;color:#fff}
+      button{padding:.6rem 1rem;border:0;border-radius:.5rem;background:#111;color:#fff;cursor:pointer}
       .item{padding:.5rem 0;border-bottom:1px solid #eee}
       .item a{font-weight:600;text-decoration:none}
+      #loading{display:none;margin-top:1rem;font-style:italic;color:#555}
     </style>
     <h1>LA Data Bot — Playwright + MCP</h1>
     <p>Enter a goal (e.g., <em>crimes in LA</em>, <em>Department of General Services</em>)</p>
@@ -32,24 +33,34 @@ def index():
       <input id="goal" type="text" placeholder="crimes in LA">
       <button>Search</button>
     </form>
+    <div id="loading">⏳ Loading results, please wait...</div>
     <div id="results"></div>
     <script>
       async function runSearch() {
         const goal = document.getElementById('goal').value.trim();
-        const res = await fetch('/search', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({goal})
-        });
-        const data = await res.json();
         const wrap = document.getElementById('results');
-        if (!Array.isArray(data)) {
-          wrap.innerHTML = '<p><b>Error:</b> ' + (data.error || 'Unknown') + '</p>';
-          return;
+        const loading = document.getElementById('loading');
+        wrap.innerHTML = '';
+        loading.style.display = 'block';
+        try {
+          const res = await fetch('/search', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({goal})
+          });
+          const data = await res.json();
+          loading.style.display = 'none';
+          if (!Array.isArray(data)) {
+            wrap.innerHTML = '<p><b>Error:</b> ' + (data.error || 'Unknown') + '</p>';
+            return;
+          }
+          wrap.innerHTML = data.map(
+            (d, i) => `<div class="item"><div>${i+1}. <a href="${d.url}" target="_blank" rel="noopener">${d.title}</a></div></div>`
+          ).join('') || '<p>No results.</p>';
+        } catch (err) {
+          loading.style.display = 'none';
+          wrap.innerHTML = '<p><b>Error:</b> ' + err.message + '</p>';
         }
-        wrap.innerHTML = data.map(
-          (d, i) => `<div class="item"><div>${i+1}. <a href="${d.url}" target="_blank" rel="noopener">${d.title}</a></div></div>`
-        ).join('') || '<p>No results.</p>';
       }
     </script>
     """
