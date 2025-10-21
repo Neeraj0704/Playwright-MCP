@@ -111,14 +111,15 @@ def _extract_search_text(text: str) -> str:
 def run_goal(goal: str, debug: bool = False, use_mcp_reread: bool = True):
     """
     Main execution flow.
-    
-    Args:
-        goal: User's search goal
-        debug: Save debug info
-        use_mcp_reread: Re-read page via MCP after navigation (recommended!)
+
+    RETURNS:
+        List[{"title": str, "url": str}]  (up to 10 items; [] on error)
     """
+    results = []
+
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
+        # Headless for UI/server usage
+        browser = p.chromium.launch(headless=True)
         page = browser.new_page()
 
         try:
@@ -133,20 +134,17 @@ def run_goal(goal: str, debug: bool = False, use_mcp_reread: bool = True):
             context = build_page_context(page)
             print(f"   ✅ Context source: {context.get('__source')}")
             print(f"   ✅ Elements found: {len(context.get('elements', []))}")
-            # 👀 Debug: show the full MCP context sent to the LLM     
-            
+
             if debug and len(context.get("elements", [])) > 0:
                 print(f"   📋 Sample elements:")
                 for elem in context["elements"][:5]:
                     print(f"      - {elem.get('role')}: {elem.get('name')}")
 
-            # 3) Ask AI for complete plan
+            # 3) Ask AI for complete plan (keywordized)
             print(f"\n[STEP 3] 🧠 AI Planning...")
             kw_goal = _extract_search_text(goal)
-            print(f"\n[STEP 3] 🧠 AI Planning...")
             print(f"   🔎 Using keywordized query: {kw_goal!r}")
             steps, meta = plan_actions_via_llm_mcp(kw_goal, context)
-            
             print(f"   ✅ Plan created by: {meta.get('source')} ({meta.get('model', 'N/A')})")
             print(f"   ✅ Steps planned: {len(steps)}")
 
@@ -156,52 +154,40 @@ def run_goal(goal: str, debug: bool = False, use_mcp_reread: bool = True):
                 saved = _save_plan(steps, meta)
                 print(f"[DEBUG] Saved to: {saved}")
 
-            # 4) Execute plan step by step
+            # 4) Execute plan step by step (capture any 'extract' result, but don't return early)
             print(f"\n[STEP 4] ▶️  Executing plan...")
-            
+            first_hit = None
+
             for i, step in enumerate(steps, 1):
                 action = step.get("action")
                 print(f"   [{i}/{len(steps)}] {action}...", end=" ")
-                
-                # Execute this step
                 try:
                     result = execute_steps(page, [step])  # Execute just this one step
                     print("✅")
-                    
-                    # Check if we extracted data
+
+                    # If the plan's 'extract' produced something, keep it
                     if result.get("extracted"):
-                        extracted = result["extracted"]
-                        print(f"\n{'='*60}")
-                        print("🎉 SUCCESS! Dataset found:")
-                        print(f"   📄 Title: {extracted.get('text')}")
-                        print(f"   🔗 URL: {extracted.get('href')}")
-                        print(f"{'='*60}\n")
-                        browser.close()
-                        return
-                    
-                    # ⭐ KEY FEATURE: Re-read page after navigation actions
+                        eh = result["extracted"]
+                        if eh.get("text") and eh.get("href"):
+                            first_hit = {
+                                "title": eh["text"],
+                                "url": eh["href"] if eh["href"].startswith("http")
+                                       else f"https://data.lacity.org{eh['href']}",
+                            }
+
+                    # Optional: re-read after potential navigation actions
                     if use_mcp_reread and action in {"press", "click", "goto"}:
-                        # Wait for page to settle
                         try:
                             page.wait_for_load_state("domcontentloaded", timeout=5000)
                         except PWTimeout:
                             pass
-                        
-                        # Check if URL changed (indicates navigation)
-                        new_url = page.url
-                        if new_url != context.get("url"):
-                            print(f"      🔄 Page changed, re-reading via MCP...")
-                            context = build_page_context(page)
-                            print(f"      ✅ New context: {len(context.get('elements', []))} elements")
-                
+
                 except PWTimeout:
                     print("⏱️  TIMEOUT")
-                    # Continue to next step
                 except Exception as e:
                     print(f"⚠️  Error: {e}")
-                    # Continue to next step
 
-            # 5) If no extraction happened, use fallback
+            # 5) Ensure results page; then collect up to 10 results directly (no helper)
             print("\n[STEP 5] 🔍 Checking for results...")
             if "browse" not in page.url:
                 print("   ⚠️  Not on results page, navigating...")
@@ -210,25 +196,58 @@ def run_goal(goal: str, debug: bool = False, use_mcp_reread: bool = True):
                     wait_until="domcontentloaded",
                     timeout=30000,
                 )
-            
-            title, url = extract_first_result(page)
-            print(f"\n{'='*60}")
-            print("✅ SUCCESS (via fallback):")
-            print(f"   📄 Title: {title}")
-            print(f"   🔗 URL: {url}")
-            print(f"{'='*60}\n")
+
+            # Try to read result anchors
+            sel = "a[href*='/d/']"
+            try:
+                page.locator(sel).first.wait_for(state="visible", timeout=15000)
+            except Exception:
+                pass
+
+            try:
+                anchors = page.locator(sel).all()
+            except Exception:
+                anchors = []
+
+            # Build up to 10 result items
+            for a in anchors[:10]:
+                try:
+                    title = (a.inner_text() or "").strip().replace("\n", " ")
+                    href = a.get_attribute("href")
+                    if not title or not href:
+                        continue
+                    url = href if href.startswith("http") else f"https://data.lacity.org{href}"
+                    results.append({"title": title, "url": url})
+                except Exception:
+                    continue
+
+            # If AI extract found something unique, prepend it
+            if first_hit and all(first_hit["url"] != r["url"] for r in results):
+                results = [first_hit] + results
+                results = results[:10]
+
+            # Final fallback: if still nothing, try your extract_first_result()
+            if not results:
+                try:
+                    title, url = extract_first_result(page)
+                    if title and url:
+                        results = [{"title": title, "url": url}]
+                except Exception:
+                    results = []
 
         except PWTimeout as e:
             print(f"\n❌ TIMEOUT: {e}")
-            sys.exit(1)
+            results = []
         except Exception as e:
             print(f"\n❌ ERROR: {e}")
             import traceback
             traceback.print_exc()
-            sys.exit(1)
+            results = []
         finally:
             print("[CLEANUP] 🧹 Closing browser")
             browser.close()
+
+    return results
 
 
 if __name__ == "__main__":
