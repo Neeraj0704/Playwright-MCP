@@ -1,4 +1,4 @@
-# LA Data Bot — Playwright + MCP AI Agent + Flask API Frontend
+# LA Data Bot — Playwright + MCP AI Agent + Flask API
 
 This project automates searching the Los Angeles Open Data Portal (https://data.lacity.org) and extracting dataset results.
 
@@ -9,17 +9,19 @@ It includes:
 
 ---
 
-## Project Structure
+## 🧩 Project Structure
+
+```plaintext
 .
-├─ main.py                 # Core deterministic robot (Required Core)
-├─ agent_cli.py            # AI-driven CLI that plans & executes steps (Optional 1)
+├─ main.py                 # Deterministic Playwright automation
+├─ agent_cli.py            # AI-driven CLI for natural-language goals
 ├─ ai_agent.py             # Planning + execution helpers (LLM + MCP integration)
 ├─ mcp_client.py           # Minimal MCP client wrapper
 ├─ mcp_server.py           # Playwright MCP server (rich page snapshot + tools)
-├─ app.py                  # Flask API + UI (Optional Challenge 2, integrates with agent_cli.py run_goal)
+├─ app.py                  # Flask API + UI layer (integrates with agent_cli.py)
 ├─ requirements.txt
 ├─ .gitignore
-└─ debug/                  # screenshots + HTML dumps (gitignored)
+└─ debug/                  # Debug artifacts (screenshots, HTML dumps)
 
 ---
 
