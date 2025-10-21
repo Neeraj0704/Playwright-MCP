@@ -57,7 +57,7 @@ MCP_PLAYWRIGHT_ARGS=mcp_server.py
 
 # See MCP browser UI if desired:
 MCP_HEADLESS=0   # default is headless (unset or 1)
-
+```
 
 How to Run
 
